@@ -134,11 +134,11 @@ export PYTHONPATH=".:$PYTHONPATH"
 python demo/demo.py
 ```
 
-Each input image is annotated and saved under `demo/results/<input_dir_name>/` with its original filename. With `EXPORT_JSON = True`, a single `predictions.json` is also written to that directory.
+Each input image is predicted and saved under `demo/results/<input_dir_name>/` with its original filename. With `EXPORT_JSON = True`, a single `predictions.json` is also written to that directory.
 
 #### Video-level (videos)
 
-`demo/demo_video.py` applies the same per-frame pipeline across a folder of videos, then writes an annotated `.mp4` plus a per-video `.json` of detections and interactions for every frame. Edit the settings at the top of `demo/demo_video.py`:
+`demo/demo_video.py` applies the same per-frame pipeline across a folder of videos, then writes the predicted `.mp4` plus a per-video `.json` of detections and interactions for every frame. Edit the settings at the top of `demo/demo_video.py`:
 
 ```python
 MODEL_CONFIG = 'projects/configs/co_dino_vit/co_dino_5scale_vit_large_coco_with_relation_only_all_losses_custom.py'
@@ -237,7 +237,7 @@ Notes:
 
 #### Re-render offline from a JSON
 
-`demo/vis_offline.py` reproduces the annotated images / videos from any exported `predictions.json` or `<name>.json` — **without the model, checkpoint, or a GPU**. It only needs the source pixels (the original images or video) plus the JSON. Point it at a predictions file:
+`demo/vis_offline.py` reproduces the predicted images / videos from any exported `predictions.json` or `<name>.json` — **without the model, checkpoint, or a GPU**. It only needs the source pixels (the original images or video) plus the JSON. Point it at a predictions file:
 
 ```python
 PREDICTIONS_JSON = 'demo/results/example_videos/food_tour.json'
