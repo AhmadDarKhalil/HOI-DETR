@@ -1,6 +1,22 @@
-# HOI-DETR: Hand-Object Interaction Detection Transformer
+<h1 align="center">
+  Improving and Evaluating Hand-Object Interaction Detection
+</h1>
 
-> **Improving and Evaluating Hand-Object Interaction Detection**
+<p align="center">
+  <a href="https://ahmaddarkhalil.github.io/HOI-DETR/"><img src="https://img.shields.io/badge/Project_Page-green?logo=github&logoColor=white" alt="Project Page"></a>
+  <a href="https://arxiv.org/abs/2606.17384"><img src="https://img.shields.io/badge/arXiv-2606.17384-b31b1b?logo=arxiv&logoColor=white" alt="arXiv"></a>
+  <a href="https://huggingface.co/spaces/ahmaddarkhalil/hoi-detr-demo"><img src="https://img.shields.io/badge/🤗_Demo-Hugging_Face-yellow" alt="Demo"></a>
+</p>
+
+<p align="center">
+  <a href="https://ahmaddarkhalil.github.io/">Ahmad Darkhalil</a><sup>1</sup>&nbsp;&nbsp;
+  <a href="https://dimadamen.github.io/">Dima Damen</a><sup>1</sup>&nbsp;&nbsp;
+  <a href="https://cs.nyu.edu/~fouhey/">David Fouhey</a><sup>2</sup>
+</p>
+
+<p align="center">
+  <b><sup>1</sup>University of Bristol</b>&nbsp;&nbsp;&nbsp;<b><sup>2</sup>New York University</b>
+</p>
 
 HOI-DETR is a transformer-based framework for detecting hands, hand-held objects, and their interactions in images and video. Built on the [Co-DETR](https://github.com/Sense-X/Co-DETR) architecture, it adds a lightweight interaction module that jointly predicts all visible hands, 1st objects (objects in direct contact with a hand), and 2nd objects (objects acted upon through a tool), along with their pairwise interaction links — all in a single forward pass.
 
@@ -14,7 +30,6 @@ HOI-DETR is a transformer-based framework for detecting hands, hand-held objects
 - **Interaction module** predicting hand → 1st object and 1st object → 2nd object relations
 - **Refined Hands23 annotations** correcting duplicate bounding boxes across 26k images
 - **Strong zero-shot generalisation** to unseen datasets and domains
-
 ---
 
 ## Installation
@@ -120,7 +135,7 @@ Results are saved to `demo/results/<input_dir_name>/` by default, preserving ori
 
 ## Datasets
 
-Evaluation uses the refined version of [Hands23](https://github.com/ddshan/hands23_data). Download the images and splits from the Hands23 repo, then add our corrected annotation file (will be shared soon).
+Evaluation uses the refined version of [Hands23](https://github.com/ddshan/hands23_data). Download the images and splits from the Hands23 repo, then add our [corrected annotation file](https://www.dropbox.com/scl/fo/5k2lc9krgtf5mzr7m6og2/AOaOSXRRrI9GyJwfO76QiIA?rlkey=n0y7wrybvey6ybvnfll7aqksl&st=yy2nb7zk&dl=0).
 
 Expected directory structure:
 
@@ -188,23 +203,47 @@ bash -c 'export PYTHONPATH=".:$PYTHONPATH" && \
 
 **Hands23 val (refined annotations)**
 
-| Method | Hand AP₅₀ | 1st obj AP₅₀ | 2nd obj AP₅₀ | F1 inter |
-|--------|-----------|-------------|-------------|----------|
-| [Hands23](https://github.com/EvaCheng-cty/hands23_detector) | 85.2 | 59.4 | 46.2 | 90.7 |
-| HOI-DETR (ours) | **93.1** | **86.5** | **78.7** | **95.5** |
+| Method | Overall AP₅₀ | Hand AP₅₀ | 1st obj AP₅₀ | 2nd obj AP₅₀ | F1 inter |
+|--------|-------------|-----------|-------------|-------------|----------|
+| [Hands23](https://github.com/EvaCheng-cty/hands23_detector) | 63.6 | 85.2 | 59.4 | 46.2 | 90.7 |
+| HOI-DETR (ours) | **86.1** | **93.1** | **86.5** | **78.7** | **95.5** |
 
-**Zero-shot cross-dataset**
+**HD-EPIC-HOI (zero-shot video, 1st obj)**
 
-| Method | HD-EPIC-HOI | [HOIST](https://github.com/SupreethN/HOISTFormer)  | [FineBio](https://github.com/aistairc/FineBio) (1st obj) |
-|--------|-------|-------------|-------------------|
-| [Hands23](https://github.com/EvaCheng-cty/hands23_detector) | 42.4 | 43.1 | 26.0 |
-| [HOIST](https://github.com/SupreethN/HOISTFormer) | 28.4 | 70.7 | — |
-| HOI-DETR (ours) | **67.6** | **76.6**  | **55.8** |
+| Method | Frame-AP | Video-AP | LTC |
+|--------|----------|----------|-----|
+| [Hands23](https://github.com/EvaCheng-cty/hands23_detector) | 46.9 | 26.8 | 31.4 |
+| [HOIST](https://github.com/SupreethN/HOISTFormer) | 30.4 | 16.1 | 27.2 |
+| HOI-DETR (ours) | **72.6** | **60.2** | **61.0** |
 
-Evaluation datasets: [Hands23](https://github.com/ddshan/hands23_data) · [HOIST](https://github.com/SupreethN/HOISTFormer) · [FineBio](https://github.com/aistairc/FineBio)
+**Zero-shot cross-dataset (1st obj AP₅₀)**
 
+| Method | [HOIST](https://github.com/SupreethN/HOISTFormer) | [FineBio](https://github.com/aistairc/FineBio) |
+|--------|-------|-------------------|
+| [Hands23](https://github.com/EvaCheng-cty/hands23_detector) | 43.1 | 26.0 |
+| [HOIST](https://github.com/SupreethN/HOISTFormer) | 70.7 | — |
+| HOI-DETR (ours) | **76.6** | **55.8** |
+
+Evaluation datasets: [Hands23](https://github.com/ddshan/hands23_data) · [HOIST](https://supreethn.github.io/research/hoistformer/index.html) · [FineBio](https://github.com/aistairc/FineBio) · [HD-EPIC](https://hd-epic.github.io/)
+
+---
+
+## Citation
+
+If you use HOI-DETR in your research, please cite:
+
+```bibtex
+@article{darkhalil2026improving,
+  title={Improving and Evaluating Hand-Object Interaction Detection},
+  author={Darkhalil, Ahmad and Damen, Dima and Fouhey, David},
+  journal={arXiv preprint arXiv:2606.17384},
+  year={2026}
+}
+```
 ---
 
 ## Acknowledgements
 
-This work builds on [Co-DETR](https://github.com/Sense-X/Co-DETR) and [MMDetection](https://github.com/open-mmlab/mmdetection). We thank the authors of Hands23, HOIST, FineBio, and HD-EPIC for making their datasets available. We also thank **Sidhartha Reddy Potu** for his contributions in the early stages of this project.
+This work was supported by EPSRC Program Grant Visual AI (EP/T028572/1). A. Darkhalil was supported by the EPSRC Doctoral Training Program (DTP). We acknowledge the usage of GPU node hours granted as part of the AIRR Innovator project "5D Hand-Object Interaction Modelling from In-the-wild Videos" (Mar 2026 – Sep 2026), the AIRR Gateway project "HOI Foundational Model from Egocentric Data" (Dec 2025 – Mar 2026), and the Sovereign AI Unit call project "Gen Model in Ego-sensed World" (Aug – Nov 2025). D. Fouhey was supported by the National Science Foundation under Grant No. 2006619 and 2437330.
+
+We thank **Sidhartha Reddy Potu** for his contributions during the early stages of this project. This work builds on [Co-DETR](https://github.com/Sense-X/Co-DETR) and [MMDetection](https://github.com/open-mmlab/mmdetection), and we gratefully acknowledge their authors for open-sourcing the codebase and architecture. We also thank the authors of [Hands23](https://github.com/ddshan/hands23_data), [HOIST](https://supreethn.github.io/research/hoistformer/index.html), [FineBio](https://github.com/aistairc/FineBio), and [HD-EPIC](https://hd-epic.github.io/) for making their datasets publicly available.
