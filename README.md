@@ -110,6 +110,10 @@ wget -O checkpoints/epoch_5.pth \
 
 ### 2. Run
 
+Both demos share the same HOI pipeline and write to `demo/results/<input_dir_name>/` by default, preserving the original filenames.
+
+#### Frame-level (images)
+
 Edit the paths and settings at the top of `demo/demo.py`:
 
 ```python
@@ -120,6 +124,7 @@ INPUT_DIR    = 'demo/example_images'   # directory of input images
 OUTPUT_DIR   = None                    # None -> demo/results/<input_dir_name>/
 SCORE_THR    = 0.3
 VERBOSE_LABELS = False
+EXPORT_JSON  = True                    # also write predictions.json (see below)
 ```
 
 Then run:
@@ -129,7 +134,123 @@ export PYTHONPATH=".:$PYTHONPATH"
 python demo/demo.py
 ```
 
-Results are saved to `demo/results/<input_dir_name>/` by default, preserving original filenames.
+Each input image is annotated and saved under `demo/results/<input_dir_name>/` with its original filename. With `EXPORT_JSON = True`, a single `predictions.json` is also written to that directory.
+
+#### Video-level (videos)
+
+`demo/demo_video.py` applies the same per-frame pipeline across a folder of videos, then writes an annotated `.mp4` plus a per-video `.json` of detections and interactions for every frame. Edit the settings at the top of `demo/demo_video.py`:
+
+```python
+MODEL_CONFIG = 'projects/configs/co_dino_vit/co_dino_5scale_vit_large_coco_with_relation_only_all_losses_custom.py'
+CHECKPOINT   = 'checkpoints/epoch_5.pth'
+DEVICE       = 'cuda:0'
+INPUT_DIR    = 'demo/example_videos'   # directory of input videos (.mp4/.mov/.avi/.mkv)
+OUTPUT_DIR   = None                    # None -> demo/results/<input_dir_name>/
+SCORE_THR    = 0.3
+FRAME_STRIDE = 1                       # process every Nth frame (1 = every frame)
+FOURCC       = 'mp4v'                  # output codec ('avc1' for H.264 if available)
+EXPORT_JSON  = True                    # also write <name>.json (see below)
+```
+
+Then run:
+
+```bash
+export PYTHONPATH=".:$PYTHONPATH"
+python demo/demo_video.py
+```
+
+For each input video, the script saves `<name>.mp4` (predictions) under `demo/results/<input_dir_name>/`, and — with `EXPORT_JSON = True` — a `<name>.json` of per-frame detections and interactions alongside it.
+
+#### Exported predictions format
+
+Both demos share the same detection/interaction schema (defined in `demo/predictions_io.py`); they differ only in the top-level wrapper — `demo.py` keys records by image, `demo_video.py` by frame.
+
+Every **detection** carries just four fields:
+
+```jsonc
+{
+  "box": [x1, y1, x2, y2],   // xyxy in original-image pixel coords
+  "score": 0.97,             // detection confidence (0–1)
+  "class_id": 0,             // 0=hand, 1=firstobject, 2=secondobject
+  "class_name": "hand"
+}
+```
+
+Every **interaction** (`hf` = hand → 1st object, `fs` = 1st → 2nd object) references its two endpoints by their index in that record's `detections` array, so no box is duplicated:
+
+```jsonc
+{ "a": 0, "b": 1, "prob": 0.88 }   // a, b index into detections; prob is the interaction score
+```
+
+**Image export** (`demo.py` → `predictions.json`):
+
+```jsonc
+{
+  "type": "image",
+  "input_dir": "/abs/path/to/example_images",
+  "score_thr": 0.3,
+  "nms_iou": 0.5,
+  "class_names": ["hand", "firstobject", "secondobject"],
+  "images": [
+    {
+      "file_name": "img_0001.jpg",
+      "width": 1920,
+      "height": 1080,
+      "detections": [ /* … */ ],
+      "hf": [ /* … */ ],
+      "fs": [ /* … */ ]
+    }
+  ]
+}
+```
+
+**Video export** (`demo_video.py` → `<name>.json`) stores video-level metadata followed by a `frames` array — **one entry per frame of the source video**, indexed continuously from `0`. When `FRAME_STRIDE > 1`, only every Nth frame is run through the model (`"processed": true`); the frames in between copy the last result forward (`"processed": false`) so the records stay aligned to the video's timeline:
+
+```jsonc
+{
+  "type": "video",
+  "video_path": "/abs/path/to/food_tour.mp4",
+  "fps": 30.0,
+  "width": 1280,
+  "height": 720,
+  "num_frames": 540,
+  "score_thr": 0.3,
+  "nms_iou": 0.5,
+  "frame_stride": 1,
+  "class_names": ["hand", "firstobject", "secondobject"],
+  "frames": [
+    {
+      "frame_idx": 0,        // absolute 0-based index into the source video
+      "processed": true,     // true = model ran on this frame; false = copied from previous processed frame
+      "detections": [ /* … */ ],
+      "hf": [ /* … */ ],
+      "fs": [ /* … */ ]
+    }
+  ]
+}
+```
+
+Notes:
+
+- **`detections`** holds every box that passed `score_thr` and soft-NMS, regardless of whether it participates in an interaction.
+- **`frame_idx`** is the absolute source-frame index and always increments by one; it does not skip when `FRAME_STRIDE > 1`.
+
+#### Re-render offline from a JSON
+
+`demo/vis_offline.py` reproduces the annotated images / videos from any exported `predictions.json` or `<name>.json` — **without the model, checkpoint, or a GPU**. It only needs the source pixels (the original images or video) plus the JSON. Point it at a predictions file:
+
+```python
+PREDICTIONS_JSON = 'demo/results/example_videos/food_tour.json'
+OUTPUT_DIR       = None    # None -> demo/results/offline/<json_stem>/
+SOURCE_OVERRIDE  = None    # set if the original images/video have moved
+VERBOSE_LABELS   = True
+```
+
+```bash
+python demo/vis_offline.py
+```
+
+It auto-detects the export type (image vs. video) and writes the same overlays the live demos produce to `demo/results/offline/<json_stem>/`. Use `SOURCE_OVERRIDE` to repoint at the source images/video if they are no longer at the path recorded in the JSON.
 
 ---
 

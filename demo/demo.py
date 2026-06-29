@@ -8,6 +8,7 @@ Edit the variables at the top for your paths, then run:
 """
 
 import glob
+import json
 import os
 
 import mmcv
@@ -26,6 +27,7 @@ from helpers import (
     compute_style,
     draw_ui,
 )
+from predictions_io import detections_record
 
 
 # ══════════════════════════════════════════════════════════════
@@ -37,7 +39,7 @@ DEVICE       = 'cuda:0'
 
 # Input: a directory of images (any folder name; final path segment is
 # reused in the default output directory).
-INPUT_DIR    = 'demo/example_images2'
+INPUT_DIR    = 'demo/example_images'
 
 
 # Output: None  -> demo/results/<basename(INPUT_DIR)>/  (recommended)
@@ -55,6 +57,13 @@ NMS_IOU      = 0.5
 #                           regardless of size (use for debugging or when
 #                           you want the raw, complete view).
 VERBOSE_LABELS = True
+
+# Export predictions: when True, write a single predictions.json in the
+# output directory capturing detections and interactions for every
+# annotated image (see predictions_io.py for the schema). Set False to
+# write only the annotated images. The exported JSON can be re-rendered
+# later with vis_offline.py.
+EXPORT_JSON = True
 
 
 # ══════════════════════════════════════════════════════════════
@@ -85,6 +94,10 @@ def main():
     interaction_branch = find_interaction_branch(model.query_head)
     print(f"[INFO] Interaction MLP input dim: "
           f"{interaction_branch.mlp[0].in_features}")
+
+    # JSON accumulator: directory-level meta + one record per annotated
+    # image. Only built when exporting.
+    image_records = [] if EXPORT_JSON else None
 
     # Main loop
     for img_path in tqdm(sorted(image_list)):
@@ -136,6 +149,36 @@ def main():
 
         out_path = os.path.join(out_dir, os.path.basename(img_path))
         mmcv.imwrite(vis, out_path)
+
+        # Log this image's results. detections_record is called after
+        # draw_ui (which mutates dets in place) but only whitelists the
+        # meaningful fields, so render-only keys never reach the JSON.
+        if EXPORT_JSON:
+            h, w = orig_img.shape[:2]
+            det_j, hf_j, fs_j = detections_record(dets, hf_inters, fs_inters)
+            image_records.append({
+                'file_name':  os.path.basename(img_path),
+                'width':      w,
+                'height':     h,
+                'detections': det_j,
+                'hf':         hf_j,
+                'fs':         fs_j,
+            })
+
+    # Write a single predictions JSON for the whole directory.
+    if EXPORT_JSON:
+        meta = {
+            'type':        'image',
+            'input_dir':   os.path.abspath(INPUT_DIR),
+            'score_thr':   SCORE_THR,
+            'nms_iou':     NMS_IOU,
+            'class_names': list(CLASS_NAMES),
+            'images':      image_records,
+        }
+        json_path = os.path.join(out_dir, 'predictions.json')
+        with open(json_path, 'w') as f:
+            json.dump(meta, f)
+        print(f"[INFO] Predictions JSON: {json_path}")
 
     print(f"[INFO] Done. Results saved to {out_dir}")
 
